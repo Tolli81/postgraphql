@@ -5,6 +5,7 @@ import PgCatalogAttribute from './object/PgCatalogAttribute'
 import PgCatalogType from './object/PgCatalogType'
 import PgCatalogConstraint from './object/PgCatalogConstraint'
 import PgCatalogProcedure from './object/PgCatalogProcedure'
+import PgCatalogViewRewrite from './object/PgCatalogViewRewrite'
 
 /**
  * A utility class for interacting with the `PgCatalogObject`s returned from the
@@ -17,6 +18,7 @@ class PgCatalog {
   private _types: Map<string, PgCatalogType> = new Map()
   private _constraints: Set<PgCatalogConstraint> = new Set()
   private _procedures: Set<PgCatalogProcedure> = new Set()
+  private _viewrewrites: Map<string, PgCatalogViewRewrite> = new Map()
 
   constructor (objects: Array<PgCatalogObject>) {
     // Build an in-memory index of all our objects for ease of use:
@@ -40,10 +42,20 @@ class PgCatalog {
         case 'procedure':
           this._procedures.add(object)
           break
+        case 'viewrewrite':
+          this._viewrewrites.set(object.id, object)
+          break
         default:
           throw new Error(`Object of kind '${object['kind']}' is not allowed.`)
       }
     }
+  }
+
+  /**
+   * Gets all of the view rewrite objects.
+   */
+  public getViewRewrites (): Array<PgCatalogViewRewrite> {
+    return Array.from(this._viewrewrites.values())
   }
 
   /**

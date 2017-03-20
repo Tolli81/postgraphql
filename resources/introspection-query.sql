@@ -232,6 +232,18 @@ with
       con.contype in ('f', 'p', 'u')
     order by
       con.conrelid, con.conkey, con.confrelid, con.confkey, con.conname
+  ),
+  -- @see https://www.postgresql.org/docs/9.6/static/catalog-pg-rewrite.html
+  viewrewrite as (
+    select
+      'viewrewrite' as "kind",
+      oid as "id",
+      ev_class as "class",
+      ev_action as "action"
+    from
+      pg_rewrite
+    where
+      rulename = '_RETURN'
   )
 select row_to_json(x) as object from namespace as x
 union all
@@ -244,4 +256,6 @@ union all
 select row_to_json(x) as object from "constraint" as x
 union all
 select row_to_json(x) as object from procedure as x
+union all
+select row_to_json(x) as object from viewrewrite as x
 ;

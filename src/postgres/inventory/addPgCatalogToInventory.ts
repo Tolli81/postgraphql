@@ -74,4 +74,12 @@ export default function addPgCatalogToInventory (
       inventory.addRelation(new PgRelation(tailCollection, headCollectionKey, pgConstraint))
     }
   }
+
+  // Add all of the relations that exist in our database to the inventory. We
+  // discover relations by looking at foreign key constraints in Postgres.
+  // TODO: Support view recursion (view -> view -> view -> table)
+  for (const pgViewRewrite of pgCatalog.getViewRewrites()) {
+    console.log('ViewRewrite', pgViewRewrite.id, pgViewRewrite.class);
+    
+  }
 }
