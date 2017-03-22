@@ -81,9 +81,9 @@ export default function addPgCatalogToInventory (
   // (foreign key contstraints).
   // TODO: Support view recursion (view -> view -> view -> table)
   for (const pgViewRewrite of pgCatalog.getViewRewrites()) {
-    console.log('ViewRewrite', pgViewRewrite.id, pgViewRewrite.class);
+    console.log('ViewRewrite', pgViewRewrite.id, pgViewRewrite.class)
     // Resolving the rewrite action to a map gives us all columns of the view
-    // that point to the 
+    // that point to the target class (table/view)
     const colRefs = rewriteActionParser.rewriteActionToMap(pgViewRewrite.action)
     for (const colRef of colRefs) {
       console.log('local t#,table,col#,column / remote t#,table,col#,column',
