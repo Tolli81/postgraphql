@@ -3,6 +3,7 @@ import { PgCatalog } from '../introspection'
 import PgCollection from './collection/PgCollection'
 import PgRelation from './collection/PgRelation'
 import Options from './Options'
+import { rewriteActionParser } from '../utils'
 
 /**
  * Adds Postgres based objects created by introspection to an inventory.
@@ -75,11 +76,28 @@ export default function addPgCatalogToInventory (
     }
   }
 
-  // Add all of the relations that exist in our database to the inventory. We
-  // discover relations by looking at foreign key constraints in Postgres.
+  // Another kind of relations are views containing columns from tables
+  // referncing other tables. We basically re-use such existing relations
+  // (foreign key contstraints).
   // TODO: Support view recursion (view -> view -> view -> table)
   for (const pgViewRewrite of pgCatalog.getViewRewrites()) {
     console.log('ViewRewrite', pgViewRewrite.id, pgViewRewrite.class);
-    
+    // Resolving the rewrite action to a map gives us all columns of the view
+    // that point to the 
+    const colRefs = rewriteActionParser.rewriteActionToMap(pgViewRewrite.action)
+    for (const colRef of colRefs) {
+      console.log('local t#,table,col#,column / remote t#,table,col#,column',
+          '??', // If we need this, we might find it by pasing
+          '??', // If we need this, we might find it by pasing
+          colRef.get('vars')['resno'],
+          colRef.get('after')['resname'],
+          '/',
+          colRef.get('after')['resorigtbl'],
+          '??', // If we need this, we might find it by pasing
+          colRef.get('after')['resorigcol'],  // This isn't the name, but the number
+                                              // vars varoattno and varattno seem to contain the same
+          '??', // If we need this, we might find it by pasing
+        )
+    }
   }
 }
