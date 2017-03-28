@@ -1,6 +1,7 @@
 /**
  * Parses rewrite actions into an ES6 map.
  */
+import objectToMap from './objectToMap'
 
 namespace rewriteActionParser {
 
@@ -21,7 +22,7 @@ namespace rewriteActionParser {
   /**
    * This code will probably fail when column names contain braces or quotes
    */
-  export function rewriteActionToMap (action: string): Array<Map<string, mixed>> {
+  export function rewriteActionToMap (action: string): Map<string, mixed> {
     const obj = {
       rtes: [],
       targetEntries: [],
@@ -31,8 +32,10 @@ namespace rewriteActionParser {
     const rtes = action.split(/(RTE.*?})(?: {|\))/).filter(Boolean).slice(1, -1)
     for (const val of rtes) {
       const elems = mixToHash(val.split(/:(\S+) ((?:\(.*?\)|\S+|[0-9]))?}*\s*/g).filter(Boolean).slice(1))
-      elems.colnamesArr = elems.colnames.split(/\"(.*?)\"\s*/).filter(Boolean).slice(1, -1)
-      obj.rtes.push(elems)
+      if (elems.colnames !== undefined) {
+        elems.colnamesArr = elems.colnames.split(/\"(.*?)\"\s*/).filter(Boolean).slice(1, -1)
+        obj.rtes.push(elems)
+      }
     }
 
     // Extract all the "TARGETENTRY" chunks and iterate over them
@@ -75,7 +78,7 @@ namespace rewriteActionParser {
       ret.sources.push(source)
     }
 
-    return ret
+    return objectToMap(ret)
   }
 }
 
