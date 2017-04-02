@@ -67,13 +67,6 @@ namespace rewriteActionParser {
       const te = _.filter(obj.targetEntries, (item) => { return item.after.resorigtbl === rte.relid } )
       for (const entry of te) {
         source.columns[entry.after.resname] = rte.colnamesArr[entry.after.resorigcol - 1]
-/*
-          source.columns.push({
-              sourceColumnName: entry.after.resname,
-              targetColumnName: rte.colnamesArr[entry.after.resorigcol-1],
-              targetColumnIdx: entry.after.resorigcol
-          })
-*/
       }
       ret.sources.push(source)
     }
