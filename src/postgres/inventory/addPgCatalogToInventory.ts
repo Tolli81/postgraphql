@@ -3,7 +3,7 @@ import { PgCatalog } from '../introspection'
 import PgCollection from './collection/PgCollection'
 import PgRelation from './collection/PgRelation'
 import Options from './Options'
-import { rewriteActionParser } from '../utils'
+import { rewriteActionParser, mapToObject } from '../utils'
 
 /**
  * Adds Postgres based objects created by introspection to an inventory.
@@ -22,6 +22,10 @@ export default function addPgCatalogToInventory (
   // We save a reference to all our collections by their class’s id so that we
   // can reference them again later.
   const collectionByClassId = new Map<string, PgCollection>()
+  // TODO This will hold all of them, until we improve the introspection query
+  // to cover everything refrenceb by views.... or will cross-namespace need
+  // some further handling? Or should we just store everything?
+  const collectionByClassId2 = new Map<string, PgCollection>()
 
   // Add all of our collections. If a class is not selectable, it is probably a
   // compound type and we shouldn’t add a collection for it to our inventory.
@@ -33,6 +37,38 @@ export default function addPgCatalogToInventory (
       const collection = new PgCollection(options, pgCatalog, pgClass)
       inventory.addCollection(collection)
       collectionByClassId.set(pgClass.id, collection)
+    }
+    collectionByClassId2.set(pgClass.id, collection)
+  }
+
+  // Another kind of relations are views containing columns from tables
+  // referncing other tables. We basically re-use such existing relations
+  // (foreign key contstraints).
+  // TODO: Support view recursion (view -> view -> view -> table)
+  const classViewReferences = {}
+  for (const pgViewRewrite of pgCatalog.getViewRewrites()) {
+    // Resolving the rewrite action to a map reflecting what tables/views
+    // are being referenced, along with how columns are mapped
+    const actionMap = rewriteActionParser.rewriteActionToMap(pgViewRewrite.action)
+    const actionObj = mapToObject(actionMap)
+    // We have the view and all sources in collectionByClass, at least when
+    // the sources are in the same schema
+    // TODO verify if applicable for other schemas as well.  We might need
+    // to add mechanism to introspection query to introspect namespaces
+    // referenced only by views. That should be fun!
+    const collView = collectionByClassId.get(pgViewRewrite.class)
+    for (const source of actionObj.sources) {
+      const ref = {
+        aliasName: source.aliasName,
+        viewOid: pgViewRewrite.class,
+        columns: source.columns,
+      }
+
+      if (classViewReferences[source.sourceId] === undefined) {
+        classViewReferences[source.sourceId] = [ref]
+      } else {
+        classViewReferences[source.sourceId].push(ref)
+      }
     }
   }
 
@@ -73,19 +109,23 @@ export default function addPgCatalogToInventory (
       }
 
       inventory.addRelation(new PgRelation(tailCollection, headCollectionKey, pgConstraint))
-    }
-  }
 
-  // Another kind of relations are views containing columns from tables
-  // referncing other tables. We basically re-use such existing relations
-  // (foreign key contstraints).
-  // TODO: Support view recursion (view -> view -> view -> table)
-  for (const pgViewRewrite of pgCatalog.getViewRewrites()) {
-    //console.log('ViewRewrite', pgViewRewrite.id, pgViewRewrite.class)
-    // Resolving the rewrite action to a map reflecting what tables/views
-    // are being referenced, along with how columns are mapped
-    const actionMap = rewriteActionParser.rewriteActionToMap(pgViewRewrite.action)
-    // TODO Make use of that
-    //console.log(actionMap)
+      // For view references, we look up what views are referencing the tail
+      // of the constraint. If that reference makes use of all the columns in
+      // the tail number (extra columns don't matter), we add an extra relation
+      // with the view instead of the original tail.  PgRelation takes care of
+      // the substitution, as it needs the original tail to take care of thing.
+      // and add the mutated version to the inventory? Turns out yes :)
+      if (pgConstraint.classId === '789351')
+      for (const view of classViewReferences[pgConstraint.classId]) {
+        // TODO: Check if the view contains all of the columns used in the relation.
+        //       We might event just try and rely on the inventory to verify it, and
+        //       if so just ignore such errors?
+        // TODO: What if column names don't match? ByFoo if Bar is used...
+        inventory.addRelation(new PgRelation(tailCollection, headCollectionKey, pgConstraint,
+          collectionByClassId2.get(view.viewOid)
+        )
+      }
+    }
   }
 }

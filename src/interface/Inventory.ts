@@ -74,8 +74,8 @@ class Inventory {
    * Adds a single relation to our inventory. If the related collections are not
    * members of this inventory we fail with an error.
    */
-  public addRelation (relation: Relation<mixed, mixed, mixed>): this {
-    const { name, tailCollection, headCollectionKey } = relation
+  public addRelation (relation: Relation<mixed, mixed, mixed, mixed, mixed>): this {
+    const { name, tailCollection, headCollectionKey, substituteTailCollection } = relation
 
     const keyName = `${tailCollection.name}-${headCollectionKey.collection.name}-${name}`
 

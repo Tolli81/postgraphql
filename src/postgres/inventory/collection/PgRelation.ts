@@ -11,7 +11,12 @@ class PgRelation implements Relation<PgClassType.Value, PgCollectionKey.Value, P
     public tailCollection: PgCollection,
     public headCollectionKey: PgCollectionKey,
     public pgConstraint: PgCatalogForeignKeyConstraint,
-  ) {}
+    public substituteTailCollection: PgCollection,
+    ) {
+      if (substituteTailCollection) {
+        this.tailCollection = this.substituteTailCollection
+      }
+    }
 
   private _pgCatalog: PgCatalog = this.tailCollection._pgCatalog
   private _pgTailAttributes: Array<PgCatalogAttribute> = this._pgCatalog.getClassAttributes(this.pgConstraint.classId, this.pgConstraint.keyAttributeNums)
