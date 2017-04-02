@@ -70,6 +70,37 @@ export default function addPgCatalogToInventory (
     }
   }
 
+  // Another kind of relations are views containing columns from tables
+  // referncing other tables. We basically re-use such existing relations
+  // (foreign key contstraints).
+  // TODO: Support view recursion (view -> view -> view -> table)
+  const classViewReferences = {}
+  for (const pgViewRewrite of pgCatalog.getViewRewrites()) {
+    // Resolving the rewrite action to a map reflecting what tables/views
+    // are being referenced, along with how columns are mapped
+    const actionMap = rewriteActionParser.rewriteActionToMap(pgViewRewrite.action)
+    const actionObj = mapToObject(actionMap)
+    // We have the view and all sources in collectionByClass, at least when
+    // the sources are in the same schema
+    // TODO verify if applicable for other schemas as well.  We might need
+    // to add mechanism to introspection query to introspect namespaces
+    // referenced only by views. That should be fun!
+    const collView = collectionByClassId.get(pgViewRewrite.class)
+    for (const source of actionObj.sources) {
+      const ref = {
+        aliasName: source.aliasName,
+        viewOid: pgViewRewrite.class,
+        columns: source.columns,
+      }
+
+      if (classViewReferences[source.sourceId] === undefined) {
+        classViewReferences[source.sourceId] = [ref]
+      } else {
+        classViewReferences[source.sourceId].push(ref)
+      }
+    }
+  }
+
   // Add all of the relations that exist in our database to the inventory. We
   // discover relations by looking at foreign key constraints in Postgres.
   // TODO: This implementation of relations could be better…
